@@ -5,8 +5,11 @@
  */
 package net.almightshell.ecache.masternode;
 
+import java.io.IOException;
 import java.util.Scanner;
-import net.almightshell.ecache.common.ECacheConstants;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import net.almightshell.ecache.common.utils.ECacheConstants;
 
 /**
  *
@@ -27,11 +30,20 @@ public class Main {
                 continue;
             }
             if (cmd.equalsIgnoreCase("start")) {
-                printHelp();
+                try {
+                    ECacheMaster.start();
+                } catch (IOException ex) {
+                    System.err.println("Start failed : "+ex.getMessage());
+                }
                 continue;
             }
             if (cmd.equalsIgnoreCase("stop")) {
-                printHelp();
+                try {
+                    ECacheMaster.stop();
+                } catch (InterruptedException ex) {
+                   ex.printStackTrace();
+                }
+                
                 continue;
             }
             if (cmd.startsWith("port")) {
@@ -53,11 +65,11 @@ public class Main {
 
     public static void printHelp() {
         System.out.println("Usage :");
-        System.out.println("start : to start the slave");
-        System.out.println("stop : to stop the slave");
-        System.out.println("port VALUE: to set the port number. By default the port " + ECacheConstants.DEFAULT_PORT + " is used");
-        System.out.println("help : to show the usage informations");
-        System.out.println("exit : to quit");
+        System.out.println("    start       : to start the Master");
+        System.out.println("    stop        : to stop the Master");
+        System.out.println("    port VALUE  : to set the port number. By default the port " + ECacheConstants.DEFAULT_PORT + " is used");
+        System.out.println("    help        : to show the usage informations");
+        System.out.println("    exit        : to quit\n");
     }
 
     private static void exit() {

@@ -11,11 +11,13 @@ package net.almightshell.ecache.masternode.services;
  */
 public interface IMasterNodeServices {
     
-    public void registerSlave();
+    public int registerSlave(int position);
     
     public void getClientMetadata();
     
-    public void getGlobalDepth();
+    public int getGlobalDepth();
     
     public void doubleDirectory();
+    
+    public void requestSplit();
 }

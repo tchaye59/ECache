@@ -11,7 +11,7 @@ import java.io.Serializable;
  *
  * @author Shell
  */
-public  class Node implements Serializable{
+public abstract class Node implements Serializable{
     String address;
     int port;
 

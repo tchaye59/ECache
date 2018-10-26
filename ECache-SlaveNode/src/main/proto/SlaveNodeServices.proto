@@ -1,0 +1,25 @@
+syntax = "proto3";
+import "google/protobuf/empty.proto";
+
+package net.almightshell.ecache.slavenode.services.proto3;
+
+option java_multiple_files = true;
+
+/**
+ * Request & Response
+ */
+
+ message CacheRecordMessage {
+        int64 key = 1;
+        int32 accessCount = 2;
+        bytes data = 3;
+ };
+
+ 
+
+/**
+ * Service
+ */
+service SlaveNodeServices{
+    rpc sendSplittedData(stream CacheRecordMessage) returns (google.protobuf.Empty);
+}

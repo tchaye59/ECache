@@ -3,12 +3,15 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package net.almightshell.ecache.common;
+package net.almightshell.ecache.slavenode.services;
 
 /**
  *
  * @author Shell
  */
-public class ECacheConstants {
-    public static int DEFAULT_PORT = 8040;
+public interface ISlaveNodeServices {
+    
+    public int sendSplittedData(int position);
+    
+    
 }
