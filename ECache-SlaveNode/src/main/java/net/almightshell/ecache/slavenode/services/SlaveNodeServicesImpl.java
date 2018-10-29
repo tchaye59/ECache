@@ -7,7 +7,6 @@ package net.almightshell.ecache.slavenode.services;
 
 import com.google.protobuf.Empty;
 import io.grpc.stub.StreamObserver;
-import net.almightshell.ecache.common.CacheRecord;
 import net.almightshell.ecache.slavenode.ECacheSlave;
 import net.almightshell.ecache.slavenode.services.proto3.CacheRecordMessage;
 import net.almightshell.ecache.slavenode.services.proto3.SlaveNodeServicesGrpc;
@@ -24,7 +23,7 @@ public class SlaveNodeServicesImpl  extends SlaveNodeServicesGrpc.SlaveNodeServi
         return new StreamObserver<CacheRecordMessage> (){
             @Override
             public void onNext(CacheRecordMessage message) {
-               ECacheSlave.addRecord(message.getKey(),message.getAccessCount(),message.getData());
+               ECacheSlave.addRecord(message.getKey(),message.getData());
                responseObserver.onNext(Empty.newBuilder().build());
             }
 

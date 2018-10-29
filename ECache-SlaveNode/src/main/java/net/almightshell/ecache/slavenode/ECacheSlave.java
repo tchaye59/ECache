@@ -11,8 +11,7 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import java.io.IOException;
-import java.util.HashMap;
-import net.almightshell.ecache.common.CacheRecord;
+import net.almightshell.ecache.common.lru.LRUCache;
 import net.almightshell.ecache.common.utils.ECacheConstants;
 import net.almightshell.ecache.masternode.services.proto3.MasterNodeServicesGrpc;
 import net.almightshell.ecache.masternode.services.proto3.RegisterSlaveRequest;
@@ -42,7 +41,7 @@ public class ECacheSlave {
 
     private static Server server = null;
     
-    private static HashMap<Long,CacheRecord> cacheHash = new HashMap();
+    private static LRUCache cache = new LRUCache();
 
     public static void start() throws IOException, Exception {
         if (!isRunning()) {
@@ -57,7 +56,7 @@ public class ECacheSlave {
             System.out.println("CacheSlave started.");
             setRunning(true);
         }
-
+        cache.init("");
     }
 
     public static void stop() throws InterruptedException {
@@ -119,21 +118,12 @@ public class ECacheSlave {
         ECacheSlave.running = running;
     }
 
-    public static void addRecord(long key, int accessCount, ByteString data) {
-        CacheRecord record = new CacheRecord(data);
-        record.setAccessCount(accessCount);
-        
-        if (cacheHash.containsKey(key)) {
-            cacheHash.remove(key);
-        }else{
-            cacheHash.put(key, record);
-        }
+    public static void addRecord(long key, ByteString data) {
+         cache.put(key, data);
     }
     
     public static void deleteRecord(long key) {
-         if (cacheHash.containsKey(key)) {
-            cacheHash.remove(key);
-        }
+         cache.remove(key);
     }
     
 

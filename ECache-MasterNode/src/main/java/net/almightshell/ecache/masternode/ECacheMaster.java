@@ -10,9 +10,7 @@ import io.grpc.ServerBuilder;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import net.almightshell.ecache.common.utils.ECacheConstants;
-import net.almightshell.ecache.common.Node;
 import net.almightshell.ecache.common.SlaveNode;
 import net.almightshell.ecache.masternode.services.MasterNodeServicesImpl;
 

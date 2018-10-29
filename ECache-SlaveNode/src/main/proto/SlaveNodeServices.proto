@@ -11,8 +11,7 @@ option java_multiple_files = true;
 
  message CacheRecordMessage {
         int64 key = 1;
-        int32 accessCount = 2;
-        bytes data = 3;
+        bytes data = 2;
  };
 
  
