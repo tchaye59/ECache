@@ -29,16 +29,20 @@ public class LRUCache {
     private LoadingCache<Long, ByteString> loadingCache = null;
     private static final int MEGABYTES = 10241024;
     private String fileName;
+    private int capacity = Integer.MAX_VALUE;
 
     public LRUCache() {
 
+    }
+    public LRUCache(int capacity) {
+        this.capacity = capacity;
     }
 
     public void init(String fileName) {
         this.fileName = fileName;
 
         loadingCache = CacheBuilder.newBuilder()
-                .maximumSize(1000000)
+                .maximumSize(capacity)
                 .expireAfterWrite(24, TimeUnit.HOURS)
                 .build(
                         new CacheLoader<Long, ByteString>() {
@@ -75,7 +79,7 @@ public class LRUCache {
         } catch (ExecutionException ex) {
             Logger.getLogger(LRUCache.class.getName()).log(Level.SEVERE, null, ex);
         }
-        return null;
+        return ByteString.EMPTY;
     }
 
     public void remove(long key) {
@@ -99,5 +103,15 @@ public class LRUCache {
             cleanUp();
         }
     }
+
+    public LoadingCache<Long, ByteString> getLoadingCache() {
+        return loadingCache;
+    }
+
+    public int getCapacity() {
+        return capacity;
+    }
+    
+    
 
 }

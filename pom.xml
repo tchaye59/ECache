@@ -9,6 +9,7 @@
         <module>ECache-Common</module>
         <module>ECache-SlaveNode</module>
         <module>ECache-MasterNode</module>
+        <module>ECache-Client</module>
     </modules>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

@@ -11,4 +11,7 @@ package net.almightshell.ecache.common.utils;
  */
 public class ECacheConstants {
     public static int DEFAULT_PORT = 8040;
+    public static int ADDRECORD_OK = 1;
+    public static int ADDRECORD_FAILED_UPDATA_METADATA = 1;
+    
 }

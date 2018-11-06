@@ -21,8 +21,6 @@ public class Main {
         Scanner sc = new Scanner(System.in);
         String cmd = "";
 
-        System.err.println("RAM : " + ECacheUtil.format(Runtime.getRuntime().maxMemory(), 2));
-        
         printHelp();
         do {
             cmd = sc.nextLine().trim();
@@ -56,6 +54,22 @@ public class Main {
                 }
                 continue;
             }
+            if (cmd.startsWith("master-adress")) {
+                try {
+                    ECacheSlave.setMasterAdress(cmd.split(" ")[1].trim());
+                } catch (Exception e) {
+                    System.err.println("Error : Invalide value");
+                }
+                continue;
+            }
+            if (cmd.startsWith("master-port")) {
+                try {
+                    ECacheSlave.setMasterPort(Integer.valueOf(cmd.split(" ")[1].trim()));
+                } catch (Exception e) {
+                    System.err.println("Error : Invalide value");
+                }
+                continue;
+            }
             if (cmd.equalsIgnoreCase("exit")) {
                 exit();
                 continue;
@@ -69,7 +83,9 @@ public class Main {
         System.out.println("Usage :");
         System.out.println("    start       : to start the Slave");
         System.out.println("    stop        : to stop the Slave");
-        System.out.println("    port VALUE  : to set the port number. By default the port " + ECacheConstants.DEFAULT_PORT + " is used");
+        System.out.println("    port VALUE  : to set the slave port number. By default the port " + ECacheConstants.DEFAULT_PORT + " is used");
+        System.out.println("    master-adress        : to set master adress");
+        System.out.println("    master-port        : to set master port");
         System.out.println("    help        : to show the usage informations");
         System.out.println("    exit        : to quit\n");
     }

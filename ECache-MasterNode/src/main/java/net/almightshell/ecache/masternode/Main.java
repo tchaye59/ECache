@@ -7,8 +7,6 @@ package net.almightshell.ecache.masternode;
 
 import java.io.IOException;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import net.almightshell.ecache.common.utils.ECacheConstants;
 
 /**
@@ -33,7 +31,7 @@ public class Main {
                 try {
                     ECacheMaster.start();
                 } catch (IOException ex) {
-                    System.err.println("Start failed : "+ex.getMessage());
+                    System.err.println("Start failed : " + ex.getMessage());
                 }
                 continue;
             }
@@ -41,9 +39,9 @@ public class Main {
                 try {
                     ECacheMaster.stop();
                 } catch (InterruptedException ex) {
-                   ex.printStackTrace();
+                    ex.printStackTrace();
                 }
-                
+
                 continue;
             }
             if (cmd.startsWith("port")) {
@@ -54,6 +52,17 @@ public class Main {
                 }
                 continue;
             }
+
+            if (cmd.startsWith("info")) {
+                try {
+                    ECacheMaster.info();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.err.println(e.getMessage());
+                }
+                continue;
+            }
+
             if (cmd.equalsIgnoreCase("exit")) {
                 exit();
                 continue;
@@ -67,6 +76,7 @@ public class Main {
         System.out.println("Usage :");
         System.out.println("    start       : to start the Master");
         System.out.println("    stop        : to stop the Master");
+        System.out.println("    info        : to show all information");
         System.out.println("    port VALUE  : to set the port number. By default the port " + ECacheConstants.DEFAULT_PORT + " is used");
         System.out.println("    help        : to show the usage informations");
         System.out.println("    exit        : to quit\n");

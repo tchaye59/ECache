@@ -14,28 +14,14 @@ import java.util.Objects;
 public class SlaveNode extends Node{
     
     private String key = null;
-    private int maxMemory;
-    private int localDepth;
 
     public SlaveNode(String key,String address, int port) {
         super(address, port);
         this.key = key;
     }
-
-    public int getMaxMemory() {
-        return maxMemory;
-    }
-
-    public void setMaxMemory(int maxMemory) {
-        this.maxMemory = maxMemory;
-    }
-
-    public int getLocalDepth() {
-        return localDepth;
-    }
-
-    public void setLocalDepth(int localDepth) {
-        this.localDepth = localDepth;
+    
+    public SlaveNode(String address, int port) {
+        super(address, port);
     }
 
     public String getKey() {
@@ -70,11 +56,7 @@ public class SlaveNode extends Node{
 
     @Override
     public String toString() {
-        return "SlaveNode{" + "key=" + key + ", maxMemory=" + maxMemory + ", localDepth=" + localDepth + '}';
+        return "SlaveNode{" + "key=" + key + '}';
     }
-    
-    
-    
-    
-    
+
 }

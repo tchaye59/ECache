@@ -45,7 +45,7 @@ public class ECacheUtil {
      * @param stream byte array
      * @return Student object
      */
-    public static Object toObject(byte[] stream) {
+    public static Serializable toObject(byte[] stream) {
         Serializable s = null;
 
         try (ByteArrayInputStream bais = new ByteArrayInputStream(stream);
@@ -60,9 +60,9 @@ public class ECacheUtil {
         }
         return s;
     }
-    
+
     public static String format(double bytes, int digits) {
-        String[] dictionary = { "bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
+        String[] dictionary = {"bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"};
         int index = 0;
         for (index = 0; index < dictionary.length; index++) {
             if (bytes < 1024) {
@@ -71,6 +71,14 @@ public class ECacheUtil {
             bytes = bytes / 1024;
         }
         return String.format("%." + digits + "f", bytes) + " " + dictionary[index];
+    }
+
+    public static int checkPositionInDirectory(long key, int globalDepth) {
+        return (int) (key % Math.pow(2, globalDepth));
+    }
+
+    public static int checkNodeFromSplitDirectoryPosition(long position, int globalDepth) {
+        return (int) (Math.pow(2, globalDepth - 1) + position);
     }
 
 }

@@ -5,14 +5,27 @@
  */
 package net.almightshell.ecache.masternode;
 
+import com.google.protobuf.Empty;
+import io.grpc.ManagedChannel;
+import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.ServerInterceptors;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import net.almightshell.ecache.common.Node;
 import net.almightshell.ecache.common.utils.ECacheConstants;
 import net.almightshell.ecache.common.SlaveNode;
+import net.almightshell.ecache.common.utils.ECacheUtil;
+import net.almightshell.ecache.masternode.services.RegisterSlaveInterceptor;
 import net.almightshell.ecache.masternode.services.MasterNodeServicesImpl;
+import net.almightshell.ecache.masternode.services.SlaveNodeServicesStubHolder;
+import net.almightshell.ecache.slavenode.services.proto3.SlaveNodeServicesGrpc;
+import net.almightshell.ecache.slavenode.services.proto3.SlaveProcessSplitRequest;
+import net.almightshell.ecache.slavenode.services.proto3.SlaveStatInfoMessage;
 
 /**
  *
@@ -24,10 +37,12 @@ public class ECacheMaster {
     private static long currentTimeMillis = System.currentTimeMillis();
 
     private static int port = ECacheConstants.DEFAULT_PORT;
-    private static int globalDepth;
+    private static int globalDepth = -1;
 
     private static final List<SlaveNode> directory = new ArrayList<>();
     private static final List<SlaveNode> pendingNodes = new ArrayList<>();
+    private static final Map<String, SlaveNode> allNodes = new HashMap<>();
+    private static int splitVersion = -1;
 
     private static Server server = null;
 
@@ -35,9 +50,11 @@ public class ECacheMaster {
         if (!isRunning()) {
             System.out.println("Startting CacheMaster ...");
             server = ServerBuilder.forPort(port)
-                    .addService(new MasterNodeServicesImpl())
+                    //                    .addService(new MasterNodeServicesImpl())
+                    .addService(ServerInterceptors.intercept(new MasterNodeServicesImpl(), new RegisterSlaveInterceptor()))
                     .build();
             server.start();
+
             System.out.println("CacheMaster started.");
             setRunning(true);
         }
@@ -55,17 +72,7 @@ public class ECacheMaster {
     }
 
     public static String registerSlave(final String key, String address, int port) {
-        SlaveNode node = null;
-        try {
-            if (node == null) {
-                node = pendingNodes.stream().filter(n -> n.getKey().equals(key)).findAny().get();
-            }
-        } catch (Exception e) {
-        }
-        try {
-            node = directory.stream().filter(n -> n.getKey().equals(key)).findAny().get();
-        } catch (Exception e) {
-        }
+        SlaveNode node = allNodes.get(key);
 
         if (node != null) {
             node.setAddress(address);
@@ -75,6 +82,14 @@ public class ECacheMaster {
             String newkey = generateAkey();
             node = new SlaveNode(newkey, address, port);
             pendingNodes.add(node);
+            allNodes.put(newkey, node);
+
+            if (directory.isEmpty()) {
+                directory.add(node);
+                pendingNodes.remove(node);
+                globalDepth = 0;
+                splitVersion = 0;
+            }
             return newkey;
         }
 
@@ -106,12 +121,69 @@ public class ECacheMaster {
 
     public static void doubleDirectory() {
         directory.addAll(directory);
+        globalDepth++;
     }
 
-    public static void requestSplit() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    public static boolean masterRequestSplit(String key) {
+
+        Node node = allNodes.get(key);
+        SlaveNodeServicesGrpc.SlaveNodeServicesBlockingStub stub = SlaveNodeServicesStubHolder.getBlockingStub(node.getAddress()+":"+ node.getPort());
+
+        for (SlaveNode sn : pendingNodes) {
+
+            boolean success = stub.slaveProcessSplit(
+                    SlaveProcessSplitRequest.newBuilder()
+                            .setAdress(sn.getAddress())
+                            .setPort(sn.getPort()).build()).getSuccess();
+            if (success) {
+                int position  = ECacheUtil.checkNodeFromSplitDirectoryPosition(directory.indexOf(node), globalDepth);
+                directory.set(position,sn);
+                splitVersion++;
+                pendingNodes.remove(sn);
+                return success;
+            }
+        }
+
+        return false;
     }
-    
-    
+
+    public static List<SlaveNode> getDirectory() {
+        return directory;
+    }
+
+    public static int getSplitVersion() {
+        return splitVersion;
+    }
+
+    static void info() {
+        if (running) {
+            System.out.println("    GlobalDepth = " + globalDepth);
+            System.out.println("    SplitVersion = " + splitVersion);
+            System.out.println("    AllNodes = " + allNodes.size());
+            System.out.println("    Pending Nodes = " + pendingNodes.size());
+            System.out.println("    Using Nodes = " + (allNodes.size() - pendingNodes.size()));
+            System.out.println("    Directory : ");
+
+            long total = directory.parallelStream().map(node -> {
+                SlaveNodeServicesGrpc.SlaveNodeServicesBlockingStub stub = SlaveNodeServicesStubHolder.getBlockingStub(node.getAddress() + ":" + node.getPort());
+                SlaveStatInfoMessage response = stub.getSlaveStatInfo(Empty.newBuilder().build());
+
+                System.out.println("    Key " + node.getKey()
+                        + "             Address " + node.getAddress() + ":" + node.getPort()
+                        + "             DataSize " + response.getDataSize()
+                        + "             MaxMemory " + response.getMaxMemory()
+                        + "             AvailableMemory " + response.getAvailableMemory());
+                return response.getDataSize();
+            }).reduce((x, y) -> x + y).get();
+
+            System.out.println("    Total DataSize = " + total);
+
+            System.out.println("Pending Nodes : ");
+            pendingNodes.stream().forEach(n -> System.err.println("Address : " + n.getAddress()));
+
+        } else {
+            System.err.println("The master is not started");
+        }
+    }
 
 }
