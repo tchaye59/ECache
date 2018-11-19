@@ -5,20 +5,25 @@
  */
 package net.almightshell.ecache.common.lru;
 
+import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.google.common.cache.CacheLoader;
-import com.google.common.cache.LoadingCache;
+import com.google.gson.Gson;
 import com.google.protobuf.ByteString;
+import io.grpc.internal.IoUtils;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
+import java.util.Map;
+import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.apache.avro.file.DataFileReader;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericDatumReader;
 
 /**
  *
@@ -26,76 +31,91 @@ import org.apache.avro.generic.GenericDatumReader;
  */
 public class LRUCache {
 
-    private LoadingCache<Long, ByteString> loadingCache = null;
+    private Cache<Long, ByteString> cache = null;
     private static final int MEGABYTES = 10241024;
-    private String fileName;
     private int capacity = Integer.MAX_VALUE;
+    private String cacheDataFile = "cache.data";
 
     public LRUCache() {
-
-    }
-    public LRUCache(int capacity) {
-        this.capacity = capacity;
-    }
-
-    public void init(String fileName) {
-        this.fileName = fileName;
-
-        loadingCache = CacheBuilder.newBuilder()
+        cache = CacheBuilder.newBuilder()
                 .maximumSize(capacity)
                 .expireAfterWrite(24, TimeUnit.HOURS)
-                .build(
-                        new CacheLoader<Long, ByteString>() {
-                    @Override
-                    public ByteString load(Long key) throws Exception {
-                        throw new Exception("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-                    }
-                }
-                );
+                .build();
+        init();
     }
 
-    public void loadData() throws IOException {
-        GenericDatumReader datum = new GenericDatumReader();
-        try (DataFileReader reader = new DataFileReader(new File(fileName), datum)) {
-            GenericData.Record record = new GenericData.Record(reader.getSchema());
-            while (reader.hasNext()) {
-                reader.next(record);
-                put((long) record.get("key"), (ByteString) record.get("data"));
-            }
+    public LRUCache(int capacity) {
+        this();
+        this.capacity = capacity;
+        init();
+    }
+
+    private void init() {
+        try {
+            loadData();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            Logger.getLogger(LRUCache.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
-    public void saveData() throws IOException {
+    public void saveData() {
+        try {
+            File file = new File(cacheDataFile);
+            if (file.exists()) {
+                file.delete();
+            }
+            file.createNewFile();
+
+            try (PrintWriter pw = new PrintWriter(file)) {
+                cache.asMap().forEach((k, d) -> {
+                    CacheData data = new CacheData(k, d.toByteArray());
+                    pw.println(new Gson().toJson(data));
+                });
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            Logger.getLogger(LRUCache.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void loadData() throws IOException {
+        File file = new File(cacheDataFile);
+        String line;
+        if (file.exists()) {
+            Scanner scan = new Scanner(new File(cacheDataFile));
+            while (scan.hasNext()) {
+                line = scan.nextLine();
+                CacheData data = new Gson().fromJson(line, CacheData.class);
+                put(data.getKey(), ByteString.copyFrom(data.getData()));
+            }
+        }
 
     }
 
     public void put(long key, ByteString data) {
-        loadingCache.put(key, data);
+        cache.put(key, data);
     }
 
     public ByteString get(long key) {
-        try {
-            return loadingCache.get(key);
-        } catch (ExecutionException ex) {
-            Logger.getLogger(LRUCache.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        return ByteString.EMPTY;
+        ByteString bs = cache.getIfPresent(key);
+        return bs == null ? ByteString.EMPTY : bs;
     }
 
     public void remove(long key) {
-        loadingCache.invalidate(key);
+        cache.invalidate(key);
     }
 
     public void removeAll() {
-        loadingCache.invalidateAll();
+        cache.invalidateAll();
     }
 
     public void removeAll(List<Long> key) {
-        loadingCache.invalidateAll(key);
+        cache.invalidateAll(key);
     }
 
     public void cleanUp() {
-        loadingCache.cleanUp();
+        cache.cleanUp();
     }
 
     public void removeEldestEntry() {
@@ -104,14 +124,44 @@ public class LRUCache {
         }
     }
 
-    public LoadingCache<Long, ByteString> getLoadingCache() {
-        return loadingCache;
+    public Cache<Long, ByteString> getCache() {
+        return cache;
     }
 
     public int getCapacity() {
         return capacity;
     }
-    
-    
 
+    private class CacheData {
+
+        long key;
+        byte[] data;
+
+        public CacheData(long key, byte[] data) {
+            this.key = key;
+            this.data = data;
+        }
+
+        public long getKey() {
+            return key;
+        }
+
+        public void setKey(long key) {
+            this.key = key;
+        }
+
+        public byte[] getData() {
+            return data;
+        }
+
+        public void setData(byte[] data) {
+            this.data = data;
+        }
+
+        @Override
+        public String toString() {
+            return "CacheData{" + "key=" + key + '}';
+        }
+
+    }
 }

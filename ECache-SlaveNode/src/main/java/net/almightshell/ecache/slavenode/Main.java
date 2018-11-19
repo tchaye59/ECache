@@ -33,6 +33,7 @@ public class Main {
                 try {
                     ECacheSlave.start();
                 } catch (Exception ex) {
+                    ex.printStackTrace();
                     System.err.println(ex.getMessage());
                 }
                 continue;
@@ -70,6 +71,14 @@ public class Main {
                 }
                 continue;
             }
+            if (cmd.startsWith("capacity")) {
+                try {
+                    ECacheSlave.setPort(Integer.valueOf(cmd.split(" ")[1].trim()));
+                } catch (Exception e) {
+                    System.err.println("Error : Invalide value");
+                }
+                continue;
+            }
             if (cmd.equalsIgnoreCase("exit")) {
                 exit();
                 continue;
@@ -81,11 +90,12 @@ public class Main {
 
     public static void printHelp() {
         System.out.println("Usage :");
+        System.out.println("    capacity <VALUE>       : to set the capacity of the salve");
+        System.out.println("    port <VALUE>  : to set the slave port number. By default the port " + ECacheConstants.DEFAULT_PORT + " is used");
+        System.out.println("    master-adress <VALUE>       : to set master adress");
+        System.out.println("    master-port <VALUE>       : to set master port");
         System.out.println("    start       : to start the Slave");
         System.out.println("    stop        : to stop the Slave");
-        System.out.println("    port VALUE  : to set the slave port number. By default the port " + ECacheConstants.DEFAULT_PORT + " is used");
-        System.out.println("    master-adress        : to set master adress");
-        System.out.println("    master-port        : to set master port");
         System.out.println("    help        : to show the usage informations");
         System.out.println("    exit        : to quit\n");
     }

@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.math.BigInteger;
 
 /**
  *
@@ -74,11 +75,28 @@ public class ECacheUtil {
     }
 
     public static int checkPositionInDirectory(long key, int globalDepth) {
-        return (int) (key % Math.pow(2, globalDepth));
+        String s = Long.toBinaryString(key);
+        if (s.length() > globalDepth) {
+            s = s.substring(s.length() - globalDepth, s.length());
+        }
+        return s.isEmpty() ? 0 : new BigInteger(s, 2).intValue();
     }
 
-    public static int checkNodeFromSplitDirectoryPosition(long position, int globalDepth) {
-        return (int) (Math.pow(2, globalDepth - 1) + position);
+    public static int[] checkSplitPositionsInDirectory(long key, int globalDepth) {
+        String s = Long.toBinaryString(key);
+        if (s.length() > globalDepth) {
+            s = s.substring(s.length() - globalDepth, s.length());
+        }
+
+        StringBuilder sb = new StringBuilder(s);
+        sb.setCharAt(0, '0');
+
+        int x = new BigInteger(sb.toString(), 2).intValue();
+        sb.setCharAt(0, '1');
+        int y = new BigInteger(sb.toString(), 2).intValue();
+
+        return new int[]{Math.min(x, y), Math.max(x, y)};
+
     }
 
 }

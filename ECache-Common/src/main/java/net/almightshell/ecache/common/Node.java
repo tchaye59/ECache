@@ -5,21 +5,31 @@
  */
 package net.almightshell.ecache.common;
 
-import java.io.Serializable;
-
 /**
  *
- * @author Shell
+ * @author Shell Writable
  */
-public abstract class Node implements Serializable{
-    String address;
-    int port;
+public abstract class Node {
+
+    private String address;
+    private int port;
 
     public Node(String address, int port) {
         this.address = address;
         this.port = port;
     }
 
+//    @Override
+//    public void write(DataOutput out) throws IOException {
+//        Text.writeString(out, address);
+//        out.writeInt(port);
+//    }
+//
+//    @Override
+//    public void readFields(DataInput in) throws IOException {
+//        address = Text.readString(in);
+//        port = in.readInt();
+//    }
     public String getAddress() {
         return address;
     }
@@ -40,4 +50,5 @@ public abstract class Node implements Serializable{
     public String toString() {
         return "Node{" + "address=" + address + ", port=" + port + '}';
     }
+
 }

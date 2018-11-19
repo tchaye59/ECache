@@ -43,6 +43,7 @@ public class SlaveNodeServicesImpl extends SlaveNodeServicesGrpc.SlaveNodeServic
             @Override
             public void onCompleted() {
                 responseObserver.onNext(Empty.newBuilder().build());
+                responseObserver.onCompleted();
             }
         };
     }
@@ -52,13 +53,12 @@ public class SlaveNodeServicesImpl extends SlaveNodeServicesGrpc.SlaveNodeServic
 
     @Override
     public void slaveProcessSplit(SlaveProcessSplitRequest request, StreamObserver<SlaveProcessSplitResponse> responseObserver) {
-        boolean success = ECacheSlave.slaveProcessSplit(request.getAdress(), request.getPort());
-
+        boolean success = ECacheSlave.slaveProcessSplit(request.getCurrentNodePosition(),request.getGlobalDepth(),request.getAdress(), request.getPort());
         responseObserver.onNext(SlaveProcessSplitResponse.newBuilder().setSuccess(success).build());
         responseObserver.onCompleted();
 
     }
-    
+
     @Override
     public void addRecord(AddRecordRequest request, StreamObserver<AddRecordResponse> responseObserver) {
 
@@ -76,7 +76,7 @@ public class SlaveNodeServicesImpl extends SlaveNodeServicesGrpc.SlaveNodeServic
 
     @Override
     public void deleteAllRecords(DeleteAllRecordsRequest request, StreamObserver<Empty> responseObserver) {
-        ECacheSlave.deleteAllRecords(request.getKeysList().parallelStream().map(m->m.getKey()).collect(Collectors.toList()));
+        ECacheSlave.deleteAllRecords(request.getKeysList().parallelStream().map(m -> m.getKey()).collect(Collectors.toList()));
         responseObserver.onNext(Empty.newBuilder().build());
         responseObserver.onCompleted();
     }
@@ -97,7 +97,5 @@ public class SlaveNodeServicesImpl extends SlaveNodeServicesGrpc.SlaveNodeServic
                 .build());
         responseObserver.onCompleted();
     }
-    
-    
 
 }

@@ -46,14 +46,15 @@ public class Main {
     }
 
     public static void main(String[] args) throws Exception {
-        ECacheClient<Integer, Record> client = new ECacheClient<>("test", ECacheConstants.DEFAULT_PORT, "localhost", false);
-        for (int i = 0; i < 1000; i++) {
-            client.put(i, new Record());
-        }
-
-        for (int i = 0; i < 1000; i++) {
-            System.out.println(i+" ->"+client.get(i));
-        }
+//        ECacheClient<Record> client = new ECacheClient<>("test", ECacheConstants.DEFAULT_PORT, "localhost", false);
+//        for (int i = 0; i < 90; i++) {
+//            client.put(i+999999999, new Record());
+////            client.remove(i);
+//        }
+//
+//        for (int i = 0; i < 100; i++) {
+//            System.out.println((i+999999999) + " ->" + client.get(i+999999999));
+//        }
     }
 
 }

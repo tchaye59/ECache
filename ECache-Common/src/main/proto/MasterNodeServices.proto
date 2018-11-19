@@ -28,46 +28,41 @@ message GlobalDepthResponse{
 message SplitVersionResponse{
     int32 splitVersion = 1;
 }
-
-message DoubleDirectoryRequest{
-    
-}
-message DoubleDirectoryResponse{
-     
-}
-
+ 
 message MasterRequestSplitRequest{
     string key = 1;
+    int32 localDepth = 2;
+    int64 entryKey = 3;
 }
 message MasterRequestSplitResponse{
     bool success = 1;
 }
 
-message DirectoryMessage{
+message BucketMessage{
     string key = 1;
     string address = 2;
     int32 port = 3;
-    int32 position = 4;
 }
-message DirectoryMessageRespponse{
-    repeated DirectoryMessage directory = 1;
+message DirectoryMessage{
+    int32 position = 1;
+    int32 value = 2;
+    
 }
 
 message MetadataMessage{
     repeated DirectoryMessage directory = 1;
-    int32 globalDepth = 2;
-    int32 splitVersion = 3;
+    repeated BucketMessage buckets = 2;
+    int32 globalDepth = 3;
+    int32 splitVersion = 4;
 }
 
 /**
  * Service
  */
 service MasterNodeServices{
-     rpc getSplitVersion(google.protobuf.Empty) returns (SplitVersionResponse);
+    rpc getSplitVersion(google.protobuf.Empty) returns (SplitVersionResponse);
     rpc getMetadata(google.protobuf.Empty) returns (MetadataMessage);
     rpc registerSlave(RegisterSlaveRequest) returns (RegisterSlaveResponse);
     rpc getGlobalDepth(google.protobuf.Empty) returns (GlobalDepthResponse);
-    rpc getDirectory(google.protobuf.Empty) returns (DirectoryMessageRespponse);
-    rpc doubleDirectory(DoubleDirectoryRequest) returns (DoubleDirectoryResponse);
     rpc masterRequestSplit(MasterRequestSplitRequest) returns (MasterRequestSplitResponse);
 }

@@ -15,8 +15,10 @@ option java_multiple_files = true;
  };
  
  message SlaveProcessSplitRequest {
-         string adress = 1;
-         int32 port = 2;
+         int32 currentNodePosition = 1;
+         int32 globalDepth = 2;
+         string adress = 3;
+         int32 port = 4;
  };
  message SlaveProcessSplitResponse {
          bool success = 1;
@@ -60,7 +62,7 @@ option java_multiple_files = true;
  */
 service SlaveNodeServices{
     rpc getSlaveStatInfo(google.protobuf.Empty) returns (SlaveStatInfoMessage);
-    rpc slaveSendSplitData(stream CacheRecordMessage) returns (google.protobuf.Empty);
+    rpc slaveSendSplitData(stream CacheRecordMessage) returns (stream google.protobuf.Empty);
     rpc slaveProcessSplit(SlaveProcessSplitRequest) returns (SlaveProcessSplitResponse);
     rpc addRecord(AddRecordRequest) returns (AddRecordResponse);
     rpc getRecord(RecordKeyMessage) returns (RecordDataMessage);

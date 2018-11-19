@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package net.almightshell.ecache.slavenode.services;
+package net.almightshell.ecache.common.utils;
 
 import io.grpc.ManagedChannelBuilder;
 import java.util.HashMap;

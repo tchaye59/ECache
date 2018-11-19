@@ -14,20 +14,18 @@ import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
-import net.almightshell.ecache.common.SlaveNode;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import net.almightshell.ecache.common.lru.LRUCache;
 import net.almightshell.ecache.common.utils.ECacheConstants;
 import net.almightshell.ecache.common.utils.ECacheUtil;
-import net.almightshell.ecache.masternode.services.proto3.DoubleDirectoryRequest;
+import net.almightshell.ecache.common.utils.SlaveNodeServicesStubHolder;
 import net.almightshell.ecache.masternode.services.proto3.MasterNodeServicesGrpc;
 import net.almightshell.ecache.masternode.services.proto3.MasterRequestSplitRequest;
 import net.almightshell.ecache.masternode.services.proto3.MasterRequestSplitResponse;
-import net.almightshell.ecache.masternode.services.proto3.MetadataMessage;
 import net.almightshell.ecache.masternode.services.proto3.RegisterSlaveRequest;
 import net.almightshell.ecache.masternode.services.proto3.RegisterSlaveResponse;
 import net.almightshell.ecache.slavenode.services.SlaveNodeServicesImpl;
-import net.almightshell.ecache.slavenode.services.SlaveNodeServicesStubHolder;
 import net.almightshell.ecache.slavenode.services.proto3.AddRecordStatus;
 import net.almightshell.ecache.slavenode.services.proto3.CacheRecordMessage;
 import net.almightshell.ecache.slavenode.services.proto3.SlaveNodeServicesGrpc;
@@ -38,8 +36,9 @@ import net.almightshell.ecache.slavenode.services.proto3.SlaveNodeServicesGrpc;
  */
 public class ECacheSlave {
 
-    private static boolean running = false;
     private static int port = ECacheConstants.DEFAULT_PORT;
+
+    
 
     long maxMemory = Runtime.getRuntime().maxMemory();
 
@@ -54,7 +53,8 @@ public class ECacheSlave {
 
     private static Server server = null;
 
-    private static LRUCache cache = new LRUCache();
+    private static int capacity = 5000;
+    private static LRUCache cache = null;
 
     public static void start() throws IOException, Exception {
         if (!isRunning()) {
@@ -71,12 +71,12 @@ public class ECacheSlave {
                     .addService(new SlaveNodeServicesImpl())
                     .build();
             server.start();
+
+            cache = new LRUCache(capacity);
             System.out.println("CacheSlave started.");
-            setRunning(true);
             updateMetadata();
         }
 
-        cache.init("");
     }
 
     public static void stop() throws InterruptedException {
@@ -84,13 +84,14 @@ public class ECacheSlave {
             System.out.println("Stopping CacheSlave ...");
             server.shutdown();
             server.awaitTermination();
+
+            cache.saveData();
             System.out.println("CacheSlave Stopped");
-            setRunning(false);
         }
     }
 
     private static boolean requireSplit() {
-        return cache.getLoadingCache().size() > 10;
+        return (cache.getCache().size() * 100 / capacity) > 75;
     }
 
     private static void registerSlave() throws Exception {
@@ -114,58 +115,55 @@ public class ECacheSlave {
         }
     }
 
-    private static void requestASplit() {
-        MasterRequestSplitResponse response = masterBlockingStub.masterRequestSplit(MasterRequestSplitRequest.newBuilder().setKey(key).build());
+    private static void requestASplit(long entryKey) {
+        MasterRequestSplitResponse response = masterBlockingStub.masterRequestSplit(MasterRequestSplitRequest.newBuilder().setEntryKey(entryKey).setLocalDepth(localDepth).setKey(key).build());
         if (response.getSuccess()) {
             updateMetadata();
             localDepth = globalDepth;
         }
     }
 
-    public static boolean slaveProcessSplit(String adress, int port) {
-        SlaveNodeServicesGrpc.SlaveNodeServicesStub stub = SlaveNodeServicesStubHolder.getStub(adress + ":" + port);
-        StreamObserver<CacheRecordMessage> toSlave = stub.slaveSendSplitData(new StreamObserver<Empty>() {
-            @Override
-            public void onNext(Empty value) {
+    public static boolean slaveProcessSplit(int currentNodePosition,int globalDepth,String adress, int port) {
+        try {
+            SlaveNodeServicesGrpc.SlaveNodeServicesStub stub = SlaveNodeServicesStubHolder.getStub(adress + ":" + port);
+            StreamObserver<CacheRecordMessage> requestObserver = stub.slaveSendSplitData(new StreamObserver<Empty>() {
+                @Override
+                public void onNext(Empty value) {}
 
-            }
+                @Override
+                public void onError(Throwable t) {
+                    t.printStackTrace();
+                }
 
-            @Override
-            public void onError(Throwable t) {
-            }
+                @Override
+                public void onCompleted() {}
+            });
 
-            @Override
-            public void onCompleted() {
-            }
-        });
-
-        //D
-        List<Long> keys = new LinkedList<>();
-
-        MetadataMessage response = masterBlockingStub.getMetadata(Empty.newBuilder().build());
-
-        List<SlaveNode> directory = response.getDirectoryList().stream().map(m -> new SlaveNode(m.getKey(), m.getAddress(), m.getPort())).collect(Collectors.toList());
-        globalDepth = response.getGlobalDepth();
-        splitVersion = response.getSplitVersion();
-
-        int currentNodePosition = directory.indexOf(directory.stream().filter(p -> p.getKey().equals(key)).findFirst().get());
-
-        //redistribute data to the new node
-        cache.getLoadingCache().asMap().forEach((k, d) -> {
-            if (ECacheUtil.checkPositionInDirectory(k, globalDepth) != currentNodePosition) {
-                toSlave.onNext(CacheRecordMessage.newBuilder()
-                        .setKey(k)
-                        .setData(d)
-                        .build());
-                keys.add(k);
-            }
-        });
-
-        //delete data distributed from the cache
-        cache.removeAll(keys);
-
-        toSlave.onCompleted();
-        return true;
+            //redistribute data to the new node
+            List<Long> moovedKeys = new LinkedList<>();
+            cache.getCache().asMap().forEach((k, d) -> {
+                if (ECacheUtil.checkPositionInDirectory(k, globalDepth) != currentNodePosition) {
+                    requestObserver.onNext(CacheRecordMessage.newBuilder()
+                            .setKey(k)
+                            .setData(d)
+                            .build());
+                    moovedKeys.add(k);
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(ECacheSlave.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+            });
+            requestObserver.onCompleted();
+            
+            //delete mooved data from the cache
+            cache.removeAll(moovedKeys);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
 
     }
 
@@ -178,18 +176,17 @@ public class ECacheSlave {
     }
 
     public static long getDataSize() {
-        return cache.getLoadingCache().size();
+        return cache.getCache().size();
     }
 
     public static boolean isRunning() {
-        return running;
-    }
-
-    public static void setRunning(boolean running) {
-        ECacheSlave.running = running;
+        return server != null && !server.isShutdown();
     }
 
     public static AddRecordStatus addRecord(long key, ByteString data, int splitVersion) {
+        if (ECacheSlave.splitVersion < splitVersion) {
+            updateMetadata();
+        }
         if (ECacheSlave.splitVersion != splitVersion) {
             return AddRecordStatus.UPDATE_METADATA;
         }
@@ -197,16 +194,9 @@ public class ECacheSlave {
         addRecord(key, data);
 
 //        new Thread(() -> {
-        if (localDepth == globalDepth) {
-            System.out.println("Double Directory size");
-            masterBlockingStub.doubleDirectory(DoubleDirectoryRequest.newBuilder().build());
-            updateMetadata();
-        }
-
-        if (requireSplit()) {
-            System.out.println("Node reqire a split ");
-            requestASplit();
-        }
+//            if (requireSplit()) {
+                requestASplit(key);
+//            }
 //        }).start();
 
         return AddRecordStatus.SUCESS;
@@ -240,6 +230,14 @@ public class ECacheSlave {
 
     public static void setMasterPort(int masterPort) {
         ECacheSlave.masterPort = masterPort;
+    }
+
+    public static void setCapacity(int capacity) {
+        ECacheSlave.capacity = capacity;
+    }
+
+    public static int getCapacity() {
+        return capacity;
     }
 
 }
