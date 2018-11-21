@@ -1,0 +1,1 @@
+mvn install:install-file -Dfile=./target/ECache-Client-0.1.0-SNAPSHOT-shaded.jar -DgroupId=net.almightshell  -DartifactId=ECache-Client-Shaded  -Dversion=0.1.0-SNAPSHOT -Dpackaging=jar  -DgeneratePom=true

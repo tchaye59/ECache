@@ -38,23 +38,28 @@ public class ECacheClient {
 
     private int splitVersion;
     private Directory directory = new Directory();
-    private boolean clientCacheEnabled = false;
+    private boolean clientCacheEnabled = true;
+    private boolean extendibleCacheEnabled = true;
 
-    public ECacheClient(String nameSpace, int masterPort, String masterAdress, boolean clientCacheEnabled) throws Exception {
+    public ECacheClient(String nameSpace, int masterPort, String masterAdress, boolean clientCacheEnabled, boolean extendibleCacheEnabled) throws Exception {
         if (nameSpace == null || nameSpace.isEmpty()) {
             throw new Exception("The name space cannot be null");
         }
         this.nameSpace = nameSpace;
         this.clientCacheEnabled = clientCacheEnabled;
+        this.extendibleCacheEnabled = extendibleCacheEnabled;
 
-        if (masterPort <= 0) {
-            masterPort = ECacheConstants.DEFAULT_PORT;
+        if (extendibleCacheEnabled) {
+            if (masterPort <= 0) {
+                masterPort = ECacheConstants.DEFAULT_PORT;
+            }
+            if (masterAdress == null || masterAdress.isEmpty()) {
+                masterAdress = "localhost";
+            }
+            masterBlockingStub = MasterNodeServicesGrpc.newBlockingStub(ManagedChannelBuilder.forAddress(masterAdress, masterPort).usePlaintext().build());
+            updateMetaData();
         }
-        if (masterAdress == null || masterAdress.isEmpty()) {
-            masterAdress = "localhost";
-        }
-        masterBlockingStub = MasterNodeServicesGrpc.newBlockingStub(ManagedChannelBuilder.forAddress(masterAdress, masterPort).usePlaintext().build());
-        updateMetaData();
+
         if (clientCacheEnabled) {
             cache_client = new LRUCache(5000);
         }
@@ -81,6 +86,10 @@ public class ECacheClient {
 
         if (clientCacheEnabled) {
             cache_client.put(key, data);
+        }
+
+        if (!extendibleCacheEnabled) {
+            return;
         }
 
         if (directory.getGlobalDepth() < 0) {
@@ -122,7 +131,7 @@ public class ECacheClient {
             bs = cache_client.get(key);
         }
 
-        if (bs == null) {
+        if (bs == null && extendibleCacheEnabled) {
 
             Bucket bucket = directory.getBucketByEntryKey((int) key);
             SlaveNodeServicesGrpc.SlaveNodeServicesBlockingStub stub = SlaveNodeServicesStubHolder.getBlockingStub(bucket.getSlaveNode().getAddress() + ":" + bucket.getSlaveNode().getPort());
@@ -145,12 +154,16 @@ public class ECacheClient {
         if (clientCacheEnabled) {
             cache_client.remove(key);
         }
-        Bucket bucket = directory.getBucketByEntryKey((int) key);
 
-        if (bucket != null) {
-            SlaveNodeServicesGrpc.SlaveNodeServicesBlockingStub stub = SlaveNodeServicesStubHolder.getBlockingStub(bucket.getSlaveNode().getAddress() + ":" + bucket.getSlaveNode().getPort());
-            stub.deleteRecord(RecordKeyMessage.newBuilder().setKey(key).build());
+        if (extendibleCacheEnabled) {
+            Bucket bucket = directory.getBucketByEntryKey((int) key);
+
+            if (bucket != null) {
+                SlaveNodeServicesGrpc.SlaveNodeServicesBlockingStub stub = SlaveNodeServicesStubHolder.getBlockingStub(bucket.getSlaveNode().getAddress() + ":" + bucket.getSlaveNode().getPort());
+                stub.deleteRecord(RecordKeyMessage.newBuilder().setKey(key).build());
+            }
         }
+
     }
 
     public void removeAll(List<Long> identifiers) {
@@ -158,7 +171,9 @@ public class ECacheClient {
         if (clientCacheEnabled) {
             cache_client.removeAll(keys);
         }
-
+        if (!extendibleCacheEnabled) {
+            return;
+        }
         keys.parallelStream().forEach(key -> {
             Bucket bucket = directory.getBucketByEntryKey(key.intValue());
             if (bucket != null) {

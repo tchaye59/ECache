@@ -7,6 +7,7 @@ package net.almightshell.ecache.client;
 
 import java.io.Serializable;
 import net.almightshell.ecache.common.utils.ECacheConstants;
+import net.almightshell.ecache.common.utils.ECacheUtil;
 
 /**
  *
@@ -20,6 +21,11 @@ public class Main {
         int y = 20;
 
         public Record() {
+        }
+
+        public Record(int x, int y) {
+            this.x = x;
+            this.y = y;
         }
 
         public int getX() {
@@ -46,15 +52,15 @@ public class Main {
     }
 
     public static void main(String[] args) throws Exception {
-//        ECacheClient<Record> client = new ECacheClient<>("test", ECacheConstants.DEFAULT_PORT, "localhost", false);
-//        for (int i = 0; i < 90; i++) {
-//            client.put(i+999999999, new Record());
-////            client.remove(i);
-//        }
+        ECacheClient client = new ECacheClient("test", ECacheConstants.DEFAULT_PORT, "localhost", true,true);
+        for (int i = 0; i < 90; i++) {
+            client.put(i + 999999999, ECacheUtil.toObjectStream(new Record(8, 6)));
+//            client.remove(i);
+        }
 //
-//        for (int i = 0; i < 100; i++) {
-//            System.out.println((i+999999999) + " ->" + client.get(i+999999999));
-//        }
+        for (int i = 0; i < 100; i++) {
+            System.out.println((i + 999999999) + " ->" + ECacheUtil.toObject(client.get(i + 999999999)));
+        }
     }
 
 }
