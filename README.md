@@ -9,3 +9,5 @@ Ecache allows applications to cache data in memory of DataNode. In order to prov
 * **ECache-SlaveNode:** Is the module that runs at the DataNode level
 * **ECache-MasterNode:** Is the module that runs at the NameNode level
 * **ECache-Client:** Is the client module needed to perform operations
+
+The communications between the modules are performed by RPC calls implemented by using Google's GRPC API.
